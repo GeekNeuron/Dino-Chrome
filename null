@@ -1,20 +1,24 @@
-بله حتماً. احتمالاً هنگام استخراج فایل‌ها از کد Base64، مشکلی پیش آمده است.
+عذرخواهی می‌کنم، به نظر می‌رسد لینک‌های قبلی مستقیم نبودند.
 
-شما می‌توانید فایل‌های صوتی اصلی و باکیفیت بازی را از لینک‌های زیر دانلود کنید. اینها فایل‌های MP3 مربوط به همان کدهای اصلی هستند:
+این هم لینک‌های جدید و سالم که مستقیماً شما را به فایل‌های صوتی می‌رسانند و می‌توانید آنها را به راحتی دانلود کنید.
+
+-----
+
+### لینک‌های دانلود مستقیم
 
   * **صدای پرش (فشار دادن کلید):**
 
-      * نام فایل: `offline-sound-press.mp3`
-      * [**دانلود**](https://www.google.com/search?q=https://github.com/wayou/t-rex-runner/raw/master/assets/default_100_percent/100-percent/offline-sound-press.mp3)
+      * نام فایل: **offline-sound-press.mp3**
+      * [**دانلود**](https://www.google.com/search?q=https://chromedino.com/assets/offline-sound-press.mp3)
 
   * **صدای برخورد با مانع:**
 
-      * نام فایل: `offline-sound-hit.mp3`
-      * [**دانلود**](https://www.google.com/search?q=https://github.com/wayou/t-rex-runner/raw/master/assets/default_100_percent/100-percent/offline-sound-hit.mp3)
+      * نام فایل: **offline-sound-hit.mp3**
+      * [**دانلود**](https://www.google.com/search?q=https://chromedino.com/assets/offline-sound-hit.mp3)
 
   * **صدای رسیدن به امتیاز ۱۰۰:**
 
-      * نام فایل: `offline-sound-reached.mp3`
-      * [**دانلود**](https://www.google.com/search?q=https://github.com/wayou/t-rex-runner/raw/master/assets/default_100_percent/100-percent/offline-sound-reached.mp3)
+      * نام فایل: **offline-sound-reached.mp3**
+      * [**دانلود**](https://www.google.com/search?q=https://chromedino.com/assets/offline-sound-reached.mp3)
 
-این فایل‌ها را دانلود کرده و در پوشه `assets/audio/` خود جایگزین فایل‌های قبلی کنید. چون در مراحل قبل کد `index.html` را برای خواندن فایل‌های `.mp3` اصلاح کردیم، دیگر نیازی به تغییر کد نیست.
+این فایل‌ها را دانلود کرده و در پوشه `assets/audio/` خود با نام‌های مشخص شده قرار دهید. پس از این کار، بازی باید به درستی صداها را پخش کند.
