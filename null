@@ -1,0 +1,12 @@
+Dino-Chrome/:335 crbug/1173575, non-JS module files deprecated.
+(anonymous) @ Dino-Chrome/:335
+Dino-Chrome/:75 Uncaught TypeError: Cannot read properties of null (reading '__jstcache')
+    at c (Dino-Chrome/:75:11)
+    at window.jstProcess (Dino-Chrome/:255:9)
+    at Dino-Chrome/:360:1
+6script.js:361 Uncaught InvalidCharacterError: Failed to execute 'atob' on 'Window': The string to be decoded is not correctly encoded.
+    at decodeBase64ToArrayBuffer (script.js:361:15)
+    at Runner.loadSounds (script.js:767:27)
+    at Runner.onKeyDown (script.js:1125:30)
+    at Runner.<anonymous> (script.js:1032:26)
+    at Runner.handleEvent (script.js:1042:21)
