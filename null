@@ -1,5 +1,20 @@
-Dino-Chrome/:447 Uncaught TypeError: Cannot set properties of undefined (setting 'data')
-    at Dino-Chrome/:447:19
-script.js:169 Uncaught TypeError: Cannot read properties of undefined (reading 'valueExists')
-    at onDocumentLoadOrUpdate (script.js:169:28)
-    at HTMLDocument.onDocumentLoad (script.js:202:5)
+بله حتماً. احتمالاً هنگام استخراج فایل‌ها از کد Base64، مشکلی پیش آمده است.
+
+شما می‌توانید فایل‌های صوتی اصلی و باکیفیت بازی را از لینک‌های زیر دانلود کنید. اینها فایل‌های MP3 مربوط به همان کدهای اصلی هستند:
+
+  * **صدای پرش (فشار دادن کلید):**
+
+      * نام فایل: `offline-sound-press.mp3`
+      * [**دانلود**](https://www.google.com/search?q=https://github.com/wayou/t-rex-runner/raw/master/assets/default_100_percent/100-percent/offline-sound-press.mp3)
+
+  * **صدای برخورد با مانع:**
+
+      * نام فایل: `offline-sound-hit.mp3`
+      * [**دانلود**](https://www.google.com/search?q=https://github.com/wayou/t-rex-runner/raw/master/assets/default_100_percent/100-percent/offline-sound-hit.mp3)
+
+  * **صدای رسیدن به امتیاز ۱۰۰:**
+
+      * نام فایل: `offline-sound-reached.mp3`
+      * [**دانلود**](https://www.google.com/search?q=https://github.com/wayou/t-rex-runner/raw/master/assets/default_100_percent/100-percent/offline-sound-reached.mp3)
+
+این فایل‌ها را دانلود کرده و در پوشه `assets/audio/` خود جایگزین فایل‌های قبلی کنید. چون در مراحل قبل کد `index.html` را برای خواندن فایل‌های `.mp3` اصلاح کردیم، دیگر نیازی به تغییر کد نیست.
