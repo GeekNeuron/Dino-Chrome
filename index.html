@@ -421,6 +421,7 @@ function expect(t, e) {
 
 function expectIsType(t, e, n) {
     expect(typeof e === n, "[" + e + "] (" + t + ") is not a " + n)
+expect(!loadTimeData, "should only include this file once"), loadTimeData = new LoadTimeData, window.loadTimeData = loadTimeData;
 }
     
 const pageData = {
