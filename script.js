@@ -758,16 +758,28 @@ Runner.prototype = {
         }
         Runner.imageSprite.complete ? this.init() : Runner.imageSprite.addEventListener(Runner.events.LOAD, this.init.bind(this));
     },
-    loadSounds() {
-        if (!IS_IOS) {
-            this.audioContext = new AudioContext;
-            const t = document.getElementById(this.config.RESOURCE_TEMPLATE_ID).content;
-            for (const e in Runner.sounds) {
-                let i = t.getElementById(Runner.sounds[e]).src;
-                const s = decodeBase64ToArrayBuffer(i = i.substr(i.indexOf(",") + 1));
-                this.audioContext.decodeAudioData(s, function(t, e) {
-                    this.soundFx[t] = e
-                }.bind(this, e))
+    async loadSounds() {
+        if (!IS_IOS && !this.audioContext) {
+            this.audioContext = new AudioContext();
+        }
+        
+        if (this.audioContext) {
+            const soundSources = Object.values(Runner.sounds);
+            const soundNames = Object.keys(Runner.sounds);
+
+            for (let i = 0; i < soundSources.length; i++) {
+                const soundName = soundNames[i].toUpperCase();
+                const path = document.getElementById(`offline-sound-${soundName.toLowerCase().replace(/_/g, '-')}`).src;
+
+                try {
+                    const response = await fetch(path);
+                    const arrayBuffer = await response.arrayBuffer();
+                    this.audioContext.decodeAudioData(arrayBuffer, (buffer) => {
+                        this.soundFx[soundSources[i]] = buffer;
+                    });
+                } catch (error) {
+                    console.error(`Failed to load sound: ${path}`, error);
+                }
             }
         }
     },
