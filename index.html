@@ -422,9 +422,7 @@ function expect(t, e) {
 function expectIsType(t, e, n) {
     expect(typeof e === n, "[" + e + "] (" + t + ") is not a " + n)
 }
-expect(!loadTimeData, "should only include this file once"), loadTimeData = new LoadTimeData, window.loadTimeData = loadTimeData, console.warn("crbug/1173575, non-JS module files deprecated.");
-
-// Page data and initial processing
+    
 const pageData = {
     dinoGameA11yAriaLabel: "Dino game, play",
     dinoGameA11yDescription: "Dino game. A pixelated dinosaur dodges cacti and pterodactyls as it runs across a desolate landscape. When you hear an audio cue, press space to jump over obstacles.",
