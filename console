@@ -1,0 +1,4 @@
+script.js:958 Uncaught TypeError: this.highScore.join is not a function
+    at DistanceMeter.drawHighScore (script.js:958:2582)
+    at DistanceMeter.update (script.js:958:2260)
+    at Runner.adjustDimensions (script.js:298:40)
