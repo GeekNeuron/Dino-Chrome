@@ -1137,6 +1137,7 @@ handleEvent(t) {
                     if (!this.playing) {
                         this.touchController || t.type !== Runner.events.TOUCHSTART || this.createTouchController();
                         e && this.handleCanvasKeyPress(t);
+                    if (this.audioContext) this.audioContext.resume();
                         this.loadSounds();
                         this.setPlayStatus(!0);
                         this.update();
