@@ -137,7 +137,6 @@
         this.audioContext = null;
         this.soundFx = {};
         this.gameOverPanel = null;
-        this.mainMessage = document.getElementById('main-message');
         this.icon = document.querySelector('.icon-offline');
 
         this.loadImages();
@@ -312,7 +311,6 @@
             if (!this.activated && !this.crashed) {
                 this.playingIntro = true;
                 this.tRex.playingIntro = true;
-                this.mainMessage.style.opacity = '0';
                 this.icon.style.opacity = '0';
                 this.containerEl.style.webkitAnimation = 'intro .4s ease-out 1 both';
                 this.containerEl.style.width = this.dimensions.WIDTH + 'px';
