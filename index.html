@@ -2,32 +2,33 @@
 <html dir="ltr" lang="en" class="offline">
 
 <head>
-  <meta charset="utf-8">
-  <meta name="color-scheme" content="light dark">
-  <meta name="theme-color" content="#fff">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-  <title>Dino Chrome</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#fff">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Dino Chrome</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦖</text></svg>">
+  <link rel="stylesheet" href="style.css">
 </head>
 
-<body id="t">
-  <div id="main-frame-error" class="interstitial-wrapper">
-    <div role="application" tabindex="0" title="Dino game, play" class="runner-container">
-      <canvas class="runner-canvas" width="600" height="150"></canvas>
-    </div>
-  </div>
+<body id="t" class="offline">
+  <div id="main-frame-error" class="interstitial-wrapper">
+    <div role="application" tabindex="0" title="Dino game, play" class="runner-container">
+      <canvas class="runner-canvas" width="600" height="150"></canvas>
+    </div>
+  </div>
 
-  <div id="offline-resources">
-    <img id="offline-resources-1x" src="assets/images/offline-resources-1x.png">
-    <img id="offline-resources-2x" src="assets/images/offline-resources-2x.png">
-    <template id="audio-resources">
-      <audio id="offline-sound-press" src="assets/audio/offline-sound-press.mp3"></audio>
-      <audio id="offline-sound-hit" src="assets/audio/offline-sound-hit.mp3"></audio>
-      <audio id="offline-sound-reached" src="assets/audio/offline-sound-reached.mp3"></audio>
-    </template>
-  </div>
+  <div id="offline-resources">
+    <img id="offline-resources-1x" src="assets/images/offline-resources-1x.png">
+    <img id="offline-resources-2x" src="assets/images/offline-resources-2x.png">
+    <template id="audio-resources">
+      <audio id="offline-sound-press" src="assets/audio/offline-sound-press.mp3"></audio>
+      <audio id="offline-sound-hit" src="assets/audio/offline-sound-hit.mp3"></audio>
+      <audio id="offline-sound-reached" src="assets/audio/offline-sound-reached.mp3"></audio>
+    </template>
+  </div>
 
-  <script src="script.js" defer></script>
+  <script src="script.js" defer></script>
 </body>
 
 </html>
