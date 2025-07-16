@@ -27,8 +27,7 @@ html[dir=rtl] .runner-container {
 }
 
 .offline {
-  transition: filter 1.5s cubic-bezier(.65, .05, .36, 1), background-color 1.5s cubic-bezier(.65, .05, .36, 1);
-  will-change: filter, background-color;
+  transition: filter 1.5s cubic-bezier(.65, .05, .36, 1);
 }
 
 .offline.inverted {
@@ -96,4 +95,28 @@ html[dir=rtl] .runner-container {
   transform-origin: top center;
   transition: transform 250ms cubic-bezier(.4, 0, 1, 1) .4s;
   z-index: 2;
+}
+
+@media (max-width: 600px) {
+  .offline .interstitial-wrapper {
+    width: 90%;
+  }
+}
+
+@media (max-height: 350px) {
+  .offline .interstitial-wrapper {
+    margin-top: 5%;
+  }
+}
+
+@media (min-height: 240px) and (orientation: landscape) {
+  .offline .interstitial-wrapper {
+    margin-bottom: 90px;
+  }
+}
+
+@media (max-height: 320px) and (orientation: landscape) {
+  .offline .runner-container {
+    top: 10px;
+  }
 }
