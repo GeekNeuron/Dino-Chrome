@@ -106,6 +106,7 @@ function Trex(t, e) {
     this.currentFrame = 0;
     this.currentAnimFrames = [];
     this.blinkDelay = 0;
+    this.blinkCount = 0;
     this.animStartTime = 0;
     this.timer = 0;
     this.msPerFrame = 1e3 / FPS;
@@ -195,7 +196,7 @@ function Horizon(t, e, i, s) {
     this.obstacles = [];
     this.obstacleHistory = [];
     this.cloudFrequency = this.config.CLOUD_FREQUENCY;
-    this.spritePos = e;
+    this.spritePos = e; // this.spritePos will hold the sprite definition object (LDPI or HDPI)
     this.clouds = [];
     this.cloudSpeed = this.config.BG_CLOUD_SPEED;
     this.horizonLine = null;
@@ -222,10 +223,10 @@ Runner.config = {
     MAX_CLOUDS: 6,
     MAX_OBSTACLE_LENGTH: 3,
     MAX_OBSTACLE_DUPLICATION: 2,
+    MAX_BLINK_COUNT: 3,
     SPEED_DROP_COEFFICIENT: 3,
 };
 
-// Restored from original
 Runner.normalConfig = {
     ACCELERATION: .001,
     GAP_COEFFICIENT: .6,
@@ -507,7 +508,7 @@ Runner.prototype = {
                 this.horizon.update(delta, this.currentSpeed, i, this.isDarkMode ^ this.inverted);
             }
 
-            const s = i && checkForCollision(this.horizon.obstacles[0], this.tRex);
+            const s = i && this.horizon.obstacles.length > 0 && checkForCollision(this.horizon.obstacles[0], this.tRex);
 
             if (!s) {
                 this.distanceRan += this.currentSpeed * e / this.msPerFrame;
@@ -537,7 +538,7 @@ Runner.prototype = {
                 this.gameOver();
             }
         }
-        if (this.playing || (!this.activated && this.tRex.blinkCount < Runner.config.MAX_BLINK_COUNT)) {
+        if (this.playing || (!this.activated && this.tRex.blinkCount < this.config.MAX_BLINK_COUNT)) {
             this.tRex.update(e);
             this.scheduleNextUpdate();
         }
@@ -563,10 +564,10 @@ Runner.prototype = {
         document.addEventListener(Runner.events.KEYDOWN, this);
         document.addEventListener(Runner.events.KEYUP, this);
         if (IS_MOBILE) {
-            this.containerEl.addEventListener(Runner.events.TOUCHSTART, this);
+            this.outerContainerEl.addEventListener(Runner.events.TOUCHSTART, this);
             document.addEventListener(Runner.events.TOUCHEND, this);
         } else {
-            this.containerEl.addEventListener(Runner.events.CLICK, this);
+            this.outerContainerEl.addEventListener(Runner.events.CLICK, this);
         }
     },
 
@@ -574,16 +575,14 @@ Runner.prototype = {
         document.removeEventListener(Runner.events.KEYDOWN, this);
         document.removeEventListener(Runner.events.KEYUP, this);
         if (IS_MOBILE) {
-            this.containerEl.removeEventListener(Runner.events.TOUCHSTART, this);
+            this.outerContainerEl.removeEventListener(Runner.events.TOUCHSTART, this);
             document.removeEventListener(Runner.events.TOUCHEND, this);
         } else {
-            this.containerEl.removeEventListener(Runner.events.CLICK, this);
+            this.outerContainerEl.removeEventListener(Runner.events.CLICK, this);
         }
     },
 
     onKeyDown(t) {
-        if (t.target !== this.canvas) return;
-
         if (!this.crashed && !this.paused) {
             if (Runner.keycodes.JUMP[t.keyCode] || t.type === 'touchstart' || t.type === 'click') {
                 t.preventDefault();
@@ -604,6 +603,8 @@ Runner.prototype = {
                     this.tRex.setDuck(true);
                 }
             }
+        } else if (this.crashed && (Runner.keycodes.RESTART[t.keyCode] || t.type === 'click' || t.type === 'touchstart')) {
+            this.restart();
         }
     },
 
@@ -616,13 +617,6 @@ Runner.prototype = {
         } else if (Runner.keycodes.DUCK[e]) {
             this.tRex.speedDrop = false;
             this.tRex.setDuck(false);
-        } else if (this.crashed) {
-            const timeSinceCrash = getTimeStamp() - this.time;
-            if (Runner.keycodes.RESTART[e] || this.isLeftClickOnCanvas(t) || (timeSinceCrash >= this.config.GAMEOVER_CLEAR_TIME && Runner.keycodes.JUMP[e])) {
-                this.restart();
-            }
-        } else if (this.paused && i) {
-            this.play();
         }
     },
 
@@ -673,8 +667,7 @@ Runner.prototype = {
         if (!this.crashed) {
             this.playing = true;
             this.paused = false;
-            this.tRex.update(0, Trex.status.RUNNING);
-            this.time = getTimeStamp();
+            this.tRex.reset();
             this.update();
         }
     },
@@ -703,7 +696,6 @@ Runner.prototype = {
         if (document.hidden || document.webkitHidden || t.type === 'blur' || document.visibilityState !== 'visible') {
             this.stop();
         } else if (!this.crashed) {
-            this.tRex.reset();
             this.play();
         }
     },
@@ -718,7 +710,7 @@ Runner.prototype = {
     },
 
     invert(t) {
-        const e = document.firstElementChild;
+        const e = document.querySelector('html');
         if (t) {
             e.classList.remove(Runner.classes.INVERTED);
             this.invertTimer = 0;
@@ -750,27 +742,22 @@ Runner.updateCanvasScaling = function(t) {
 GameOverPanel.prototype = {
     draw() {
         const t = GameOverPanel.dimensions;
-        let e = t.TEXT_WIDTH,
-            i = t.TEXT_HEIGHT,
-            s = t.RESTART_WIDTH,
-            n = t.RESTART_HEIGHT;
-        const a = this.canvasDimensions.WIDTH / 2 - e / 2,
-            o = this.canvasDimensions.HEIGHT / 2 - i / 2 - 20, // Move text up
-            h = this.canvasDimensions.WIDTH / 2 - s / 2,
-            r = this.canvasDimensions.HEIGHT / 2 - n / 2 + 20; // Y pos for restart
+        let e = t.TEXT_WIDTH, i = t.TEXT_HEIGHT, s = t.RESTART_WIDTH, n = t.RESTART_HEIGHT;
 
-        if (IS_HIDPI) {
-            e *= 2; i *= 2; s *= 2; n *= 2;
-        }
+        // Position for "Game Over" text
+        const gameOverX = this.canvasDimensions.WIDTH / 2 - t.TEXT_WIDTH / 2;
+        const gameOverY = this.canvasDimensions.HEIGHT / 3;
 
-        this.canvasCtx.save();
-        this.canvasCtx.translate(a, o);
-        this.canvasCtx.drawImage(Runner.imageSprite, this.textImgPos.x, this.textImgPos.y, e, i, 0, 0, t.TEXT_WIDTH, t.TEXT_HEIGHT);
-        this.canvasCtx.restore();
+        // Position for Restart button
+        const restartX = this.canvasDimensions.WIDTH / 2 - t.RESTART_WIDTH / 2;
+        const restartY = gameOverY + t.TEXT_HEIGHT + 20;
+
+
+        if (IS_HIDPI) { e *= 2; i *= 2; s *= 2; n *= 2; }
 
         this.canvasCtx.save();
-        this.canvasCtx.translate(h, r);
-        this.canvasCtx.drawImage(Runner.imageSprite, this.restartImgPos.x, this.restartImgPos.y, s, n, 0, 0, t.RESTART_WIDTH, t.RESTART_HEIGHT);
+        this.canvasCtx.drawImage(Runner.imageSprite, this.textImgPos.x, this.textImgPos.y, e, i, gameOverX, gameOverY, t.TEXT_WIDTH, t.TEXT_HEIGHT);
+        this.canvasCtx.drawImage(Runner.imageSprite, this.restartImgPos.x, this.restartImgPos.y, s, n, restartX, restartY, t.RESTART_WIDTH, t.RESTART_HEIGHT);
         this.canvasCtx.restore();
     }
 };
@@ -937,7 +924,7 @@ Trex.prototype = {
         this.jumpVelocity = 0;
         this.jumping = false;
         this.ducking = false;
-        this.update(0, Trex.status.WAITING);
+        this.update(0, Trex.status.RUNNING);
         this.speedDrop = false;
         this.jumpCount = 0;
     }
@@ -964,12 +951,12 @@ DistanceMeter.prototype = {
     calcXPos(t) {
         this.x = t - (DistanceMeter.dimensions.DEST_WIDTH * (this.maxScoreUnits + 1));
     },
-    draw(t, e, i) {
-        let s = DistanceMeter.dimensions.WIDTH, n = DistanceMeter.dimensions.HEIGHT, a = DistanceMeter.dimensions.WIDTH * e;
-        if (IS_HIDPI) { s *= 2; n *= 2; a *= 2; }
-        a += this.spritePos.x;
-        const o = this.spritePos.y;
-        this.canvasCtx.drawImage(this.image, a, o, s, n, this.x + t * DistanceMeter.dimensions.DEST_WIDTH, this.y, DistanceMeter.dimensions.WIDTH, DistanceMeter.dimensions.HEIGHT);
+    draw(t, e) {
+        let i = DistanceMeter.dimensions.WIDTH, s = DistanceMeter.dimensions.HEIGHT, n = DistanceMeter.dimensions.WIDTH * e;
+        if (IS_HIDPI) { i *= 2; s *= 2; n *= 2; }
+        n += this.spritePos.x;
+        const a = this.spritePos.y;
+        this.canvasCtx.drawImage(this.image, n, a, i, s, this.x + t * DistanceMeter.dimensions.DEST_WIDTH, this.y, DistanceMeter.dimensions.WIDTH, DistanceMeter.dimensions.HEIGHT);
     },
     getActualDistance(t) {
         return t ? Math.round(t * this.config.COEFFICIENT) : 0;
@@ -1139,18 +1126,24 @@ Horizon.prototype = {
         if (this.duplicateObstacleCheck(i.type) || t < i.minSpeed) {
             this.addNewObstacle(t);
         } else {
-            this.obstacles.push(new Obstacle(this.canvasCtx, i, this.spriteDef[i.type], this.dimensions, this.gapCoefficient, t));
+            // FIX: Changed this.spriteDef to this.spritePos
+            this.obstacles.push(new Obstacle(this.canvasCtx, i, this.spritePos[i.type], this.dimensions, this.gapCoefficient, t));
             this.obstacleHistory.unshift(i.type);
             if (this.obstacleHistory.length > 1) this.obstacleHistory.splice(Runner.config.MAX_OBSTACLE_DUPLICATION);
         }
     },
-    duplicateObstacleCheck: (t) => this.obstacleHistory.indexOf(t) > -1,
+    duplicateObstacleCheck(t) {
+        return this.obstacleHistory.indexOf(t) > -1;
+    },
     reset() {
         this.obstacles = [];
         this.horizonLine.reset();
+        this.clouds = [];
+        this.addCloud();
     },
     addCloud() {
-        this.clouds.push(new Cloud(this.canvas, this.spriteDef.CLOUD, this.dimensions.WIDTH));
+        // FIX: Changed this.spriteDef to this.spritePos
+        this.clouds.push(new Cloud(this.canvas, this.spritePos.CLOUD, this.dimensions.WIDTH));
     }
 };
 
@@ -1178,7 +1171,6 @@ Runner.spriteDefinition = {
     }
 };
 
-// Restored with full collision boxes
 Obstacle.types = [{
     type: "CACTUS_SMALL",
     width: 17,
@@ -1202,7 +1194,6 @@ Obstacle.types = [{
     width: 46,
     height: 40,
     yPos: [100, 75, 50],
-    yPosMobile: [100, 50],
     multipleSpeed: 999,
     minSpeed: 8.5,
     minGap: 150,
@@ -1211,7 +1202,6 @@ Obstacle.types = [{
     frameRate: 1e3 / 6,
     speedOffset: .8
 }];
-
 
 // --- Main ---
 function onDocumentLoad() {
