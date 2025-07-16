@@ -955,8 +955,128 @@
     function DistanceMeter(canvas, spritePos, canvasWidth) { this.canvas = canvas; this.canvasCtx = canvas.getContext('2d'); this.image = Runner.imageSprite; this.spritePos = spritePos; this.x = 0; this.y = 5; this.currentDistance = 0; this.maxScore = 0; this.highScore = '0'; this.digits = []; this.achievement = false; this.defaultString = ''; this.flashTimer = 0; this.flashIterations = 0; this.config = DistanceMeter.config; this.maxScoreUnits = this.config.MAX_DISTANCE_UNITS; this.init(canvasWidth); }
     DistanceMeter.config = { MAX_DISTANCE_UNITS: 5, ACHIEVEMENT_DISTANCE: 100, COEFFICIENT: 0.025, FLASH_DURATION: 1000 / 4, FLASH_ITERATIONS: 3, };
     DistanceMeter.dimensions = { WIDTH: 10, HEIGHT: 13, DEST_WIDTH: 11, };
-    DistanceMeter.prototype = { init: function (width) { let maxScoreStr = ''; this.calcXPos(width); this.maxScore = this.maxScoreUnits; for (let i = 0; i < this.maxScoreUnits; i++) { this.draw(i, 0); this.defaultString += '0'; maxScoreStr += '9'; } this.maxScore = parseInt(maxScoreStr); }, calcXPos: function (canvasWidth) { this.x = canvasWidth - DistanceMeter.dimensions.DEST_WIDTH * (this.maxScoreUnits + 1); }, draw: function (digitPos, value, opt_highScore) { let sourceWidth = DistanceMeter.dimensions.WIDTH; let sourceHeight = DistanceMeter.dimensions.HEIGHT; let sourceX = DistanceMeter.dimensions.WIDTH * value; if (IS_HIDPI) { sourceWidth *= 2; sourceHeight *= 2; sourceX *= 2; } sourceX += this.spritePos.x; const sourceY = this.spritePos.y; const targetX = opt_highScore ? this.x - this.maxScoreUnits * 2 * DistanceMeter.dimensions.DEST_WIDTH : this.x; const targetY = this.y; this.canvasCtx.save(); this.canvasCtx.globalAlpha = opt_highScore ? 0.8 : 1; this.canvasCtx.drawImage(this.image, sourceX, sourceY, sourceWidth, sourceHeight, targetX + digitPos * DistanceMeter.dimensions.DEST_WIDTH, targetY, DistanceMeter.dimensions.WIDTH, DistanceMeter.dimensions.HEIGHT); this.canvasCtx.restore(); }, getActualDistance: function (distance) { return distance ? Math.round(distance * this.config.COEFFICIENT) : 0; }, update: function (deltaTime, distance) { let paint = true; let playSound = false; if (this.achievement) { if (this.flashIterations <= this.config.FLASH_ITERATIONS) { this.flashTimer += deltaTime; if (this.flashTimer < this.config.FLASH_DURATION) { paint = false; } else if (this.flashTimer > this.config.FLASH_DURATION * 2) { this.flashTimer = 0; this.flashIterations++; } } else { this.achievement = false; this.flashIterations = 0; this.flashTimer = 0; } } distance = this.getActualDistance(distance); if (distance > 0) { if (distance % this.config.ACHIEVEMENT_DISTANCE === 0) { this.achievement = true; this.flashTimer = 0; playSound = true; } const distanceStr = (this.defaultString + distance).slice(-this.maxScoreUnits); this.digits = distanceStr.split(''); } else { this.digits = this.defaultString.split(''); } if (paint) { for (let i = this.digits.length - 1; i >= 0; i--) { this.draw(i, parseInt(this.digits[i])); } } this.drawHighScore(); return playSound; }, setHighScore: function (distance) { distance = this.getActualDistance(distance); const highScoreStr = (this.defaultString + distance).slice(-this.maxScoreUnits); this.highScore = ['10', '11'].concat(highScoreStr.split('')); }, drawHighScore: function () { if (parseInt(this.highScore.join('')) > 0) { this.canvasCtx.save(); this.canvasCtx.globalAlpha = 0.8; for (let i = this.highScore.length - 1; i >= 0; i--) { this.draw(i, parseInt(this.highScore[i], 10), true); } this.canvasCtx.restore(); } }, reset: function () { this.update(0); this.achievement = false; } };
+    // --- DistanceMeter Class Prototype (FIXED) ---
+    DistanceMeter.prototype = {
+    init: function (width) {
+        let maxScoreStr = '';
+        this.calcXPos(width);
+        this.maxScore = this.maxScoreUnits;
+        for (let i = 0; i < this.maxScoreUnits; i++) {
+            this.draw(i, 0);
+            this.defaultString += '0';
+            maxScoreStr += '9';
+        }
+        this.highScore = '0'; // FIX: Initialize as a string
+        this.maxScore = parseInt(maxScoreStr);
+    },
 
+    calcXPos: function (canvasWidth) {
+        this.x = canvasWidth - (DistanceMeter.dimensions.DEST_WIDTH * (this.maxScoreUnits + 1));
+    },
+
+    draw: function (digitPos, value, opt_highScore) {
+        let sourceWidth = DistanceMeter.dimensions.WIDTH;
+        let sourceHeight = DistanceMeter.dimensions.HEIGHT;
+        let sourceX = DistanceMeter.dimensions.WIDTH * value;
+
+        if (IS_HIDPI) {
+            sourceWidth *= 2;
+            sourceHeight *= 2;
+            sourceX *= 2;
+        }
+
+        sourceX += this.spritePos.x;
+        const sourceY = this.spritePos.y;
+
+        // Position HIGH SCORE (HI) text correctly
+        const targetX = opt_highScore ? this.x - (this.maxScoreUnits * 2.5) : this.x;
+
+        this.canvasCtx.save();
+        this.canvasCtx.globalAlpha = .8;
+        this.canvasCtx.drawImage(
+            this.image,
+            sourceX, sourceY,
+            sourceWidth, sourceHeight,
+            targetX + digitPos * DistanceMeter.dimensions.DEST_WIDTH, this.y,
+            DistanceMeter.dimensions.WIDTH, DistanceMeter.dimensions.HEIGHT
+        );
+        this.canvasCtx.restore();
+    },
+
+    getActualDistance: function (distance) {
+        return distance ? Math.round(distance * this.config.COEFFICIENT) : 0;
+    },
+
+    update: function (deltaTime, distance) {
+        let paint = true;
+        let playSound = false;
+
+        if (this.achievement) {
+            if (this.flashIterations <= this.config.FLASH_ITERATIONS) {
+                this.flashTimer += deltaTime;
+                if (this.flashTimer < this.config.FLASH_DURATION) {
+                    paint = false;
+                } else if (this.flashTimer > (this.config.FLASH_DURATION * 2)) {
+                    this.flashTimer = 0;
+                    this.flashIterations++;
+                }
+            } else {
+                this.achievement = false;
+                this.flashIterations = 0;
+                this.flashTimer = 0;
+            }
+        }
+
+        distance = this.getActualDistance(distance);
+
+        if (distance > 0) {
+            if (distance % this.config.ACHIEVEMENT_DISTANCE === 0) {
+                this.achievement = true;
+                this.flashTimer = 0;
+                playSound = true;
+            }
+            const distanceStr = (this.defaultString + distance).slice(-this.maxScoreUnits);
+            this.digits = distanceStr.split('');
+        } else {
+            this.digits = this.defaultString.split('');
+        }
+
+        if (paint) {
+            for (let i = this.digits.length - 1; i >= 0; i--) {
+                this.draw(i, parseInt(this.digits[i]));
+            }
+        }
+
+        this.drawHighScore();
+        return playSound;
+    },
+
+    setHighScore: function (distance) {
+        distance = this.getActualDistance(distance);
+        const highScoreStr = (this.defaultString + distance).slice(-this.maxScoreUnits);
+        // FIX: Replicate original "HI" score prefix by using an array
+        this.highScore = ['10', '11', ''].concat(highScoreStr.split(''));
+    },
+
+    drawHighScore: function () {
+        // FIX: Handle both string and array types for highScore
+        // parseInt on an array like ['10', '11', ...] correctly evaluates to a number > 0
+        if (parseInt(this.highScore, 10) > 0) {
+            this.canvasCtx.save();
+            this.canvasCtx.globalAlpha = 0.8;
+            for (let i = 0; i < this.highScore.length; i++) {
+                this.draw(i, parseInt(this.highScore[i], 10), true);
+            }
+            this.canvasCtx.restore();
+        }
+    },
+    
+    reset: function () {
+        this.update(0, 0);
+        this.achievement = false;
+    }
+};
+    
     // --- Sprite Definitions ---
     Runner.spriteDefinition = {
         LDPI: {
