@@ -262,7 +262,7 @@ function Runner(t, e) {
     this.runningTime = 0;
     this.msPerFrame = 1e3 / FPS;
     this.currentSpeed = this.config.SPEED;
-    Runner.slowDown = !1;
+    Runner.slowDown = true;
     this.obstacles = [];
     this.activated = !1;
     this.playing = !1;
