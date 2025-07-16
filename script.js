@@ -938,23 +938,331 @@
             this.clouds.push(new Cloud(this.canvas, this.spritePos.CLOUD, this.dimensions.WIDTH));
         },
     };
-    
-    // --- Other Classes ---
-    function Cloud(canvas, spritePos, containerWidth) { this.canvas = canvas; this.canvasCtx = this.canvas.getContext('2d'); this.spritePos = spritePos; this.containerWidth = containerWidth; this.xPos = containerWidth; this.yPos = 0; this.remove = false; this.gap = getRandomNum(Cloud.config.MIN_CLOUD_GAP, Cloud.config.MAX_CLOUD_GAP); this.init(); }
-    Cloud.config = { HEIGHT: 14, MAX_CLOUD_GAP: 400, MAX_SKY_LEVEL: 30, MIN_CLOUD_GAP: 100, MIN_SKY_LEVEL: 71, WIDTH: 46, };
-    Cloud.prototype = { init: function () { this.yPos = getRandomNum(Cloud.config.MAX_SKY_LEVEL, Cloud.config.MIN_SKY_LEVEL); this.draw(); }, draw: function () { this.canvasCtx.save(); let sourceWidth = Cloud.config.WIDTH, sourceHeight = Cloud.config.HEIGHT; if (IS_HIDPI) { sourceWidth *= 2; sourceHeight *= 2; } this.canvasCtx.drawImage(Runner.imageSprite, this.spritePos.x, this.spritePos.y, sourceWidth, sourceHeight, this.xPos, this.yPos, Cloud.config.WIDTH, Cloud.config.HEIGHT); this.canvasCtx.restore(); }, update: function (speed) { if (!this.remove) { this.xPos -= Math.ceil(speed); this.draw(); if (!this.isVisible()) { this.remove = true; } } }, isVisible: function () { return this.xPos + Cloud.config.WIDTH > 0; } };
 
-    function HorizonLine(canvas, spritePos) { this.spritePos = spritePos; this.canvas = canvas; this.canvasCtx = this.canvas.getContext('2d'); this.sourceDimensions = {}; this.dimensions = HorizonLine.dimensions; this.sourceXPos = [this.spritePos.x, this.spritePos.x + this.dimensions.WIDTH]; this.xPos = []; this.yPos = 0; this.bumpThreshold = 0.5; this.setSourceDimensions(); this.draw(); }
-    HorizonLine.dimensions = { WIDTH: 600, HEIGHT: 12, YPOS: 127, };
-    HorizonLine.prototype = { setSourceDimensions: function () { for (const dimension in this.dimensions) { if (IS_HIDPI) { if (dimension !== 'YPOS') { this.sourceDimensions[dimension] = this.dimensions[dimension] * 2; } } else { this.sourceDimensions[dimension] = this.dimensions[dimension]; } } this.xPos = [0, this.dimensions.WIDTH]; this.yPos = this.dimensions.YPOS; }, getRandomType: function () { return Math.random() > this.bumpThreshold ? this.dimensions.WIDTH : 0; }, draw: function () { this.canvasCtx.drawImage(Runner.imageSprite, this.sourceXPos[0], this.spritePos.y, this.sourceDimensions.WIDTH, this.sourceDimensions.HEIGHT, this.xPos[0], this.yPos, this.dimensions.WIDTH, this.dimensions.HEIGHT); this.canvasCtx.drawImage(Runner.imageSprite, this.sourceXPos[1], this.spritePos.y, this.sourceDimensions.WIDTH, this.sourceDimensions.HEIGHT, this.xPos[1], this.yPos, this.dimensions.WIDTH, this.dimensions.HEIGHT); }, update: function (deltaTime, speed) { const increment = Math.floor(speed * (FPS / 1000) * deltaTime); if (this.xPos[0] <= -this.dimensions.WIDTH) { this.xPos[0] += this.dimensions.WIDTH * 2; this.xPos[1] = this.xPos[0] - this.dimensions.WIDTH; this.sourceXPos[0] = this.getRandomType() + this.spritePos.x; } this.xPos[0] -= increment; this.xPos[1] = this.xPos[0] + this.dimensions.WIDTH; this.draw(); }, reset: function () { this.xPos[0] = 0; this.xPos[1] = this.dimensions.WIDTH; } };
-    
-    function GameOverPanel(canvas, textSprite, restartSprite, dimensions) { this.canvas = canvas; this.canvasCtx = canvas.getContext('2d'); this.canvasDimensions = dimensions; this.textImgPos = textSprite; this.restartImgPos = restartSprite; this.draw(); }
-    GameOverPanel.dimensions = { TEXT_WIDTH: 191, TEXT_HEIGHT: 11, RESTART_WIDTH: 36, RESTART_HEIGHT: 32 };
-    GameOverPanel.prototype = { updateDimensions: function (width) { this.canvasDimensions.WIDTH = width; this.draw(); }, draw: function () { const dimensions = GameOverPanel.dimensions; let textSourceWidth = dimensions.TEXT_WIDTH; let textSourceHeight = dimensions.TEXT_HEIGHT; let restartSourceWidth = dimensions.RESTART_WIDTH; let restartSourceHeight = dimensions.RESTART_HEIGHT; if (IS_HIDPI) { textSourceWidth *= 2; textSourceHeight *= 2; restartSourceWidth *= 2; restartSourceHeight *= 2; } const textX = this.canvasDimensions.WIDTH / 2 - dimensions.TEXT_WIDTH / 2; const textY = Math.round((this.canvasDimensions.HEIGHT - 25) / 3); const restartX = this.canvasDimensions.WIDTH / 2 - dimensions.RESTART_WIDTH / 2; const restartY = textY + dimensions.TEXT_HEIGHT + 20; this.canvasCtx.save(); this.canvasCtx.drawImage(Runner.imageSprite, this.textImgPos.x, this.textImgPos.y, textSourceWidth, textSourceHeight, textX, textY, dimensions.TEXT_WIDTH, dimensions.TEXT_HEIGHT); this.canvasCtx.drawImage(Runner.imageSprite, this.restartImgPos.x, this.restartImgPos.y, restartSourceWidth, restartSourceHeight, restartX, restartY, dimensions.RESTART_WIDTH, dimensions.RESTART_HEIGHT); this.canvasCtx.restore(); } };
+    // =================================================================================
+// Cloud Class
+// Handles the creation, movement, and removal of clouds in the background.
+// =================================================================================
 
-    function DistanceMeter(canvas, spritePos, canvasWidth) { this.canvas = canvas; this.canvasCtx = canvas.getContext('2d'); this.image = Runner.imageSprite; this.spritePos = spritePos; this.x = 0; this.y = 5; this.currentDistance = 0; this.maxScore = 0; this.highScore = '0'; this.digits = []; this.achievement = false; this.defaultString = ''; this.flashTimer = 0; this.flashIterations = 0; this.config = DistanceMeter.config; this.maxScoreUnits = this.config.MAX_DISTANCE_UNITS; this.init(canvasWidth); }
-    DistanceMeter.config = { MAX_DISTANCE_UNITS: 5, ACHIEVEMENT_DISTANCE: 100, COEFFICIENT: 0.025, FLASH_DURATION: 1000 / 4, FLASH_ITERATIONS: 3, };
-    DistanceMeter.dimensions = { WIDTH: 10, HEIGHT: 13, DEST_WIDTH: 11, };
+/**
+ * Cloud object constructor.
+ * @param {HTMLCanvasElement} canvas The game's canvas element.
+ * @param {Object} spritePos The sprite coordinates for the cloud image.
+ * @param {number} containerWidth The width of the game container.
+ */
+function Cloud(canvas, spritePos, containerWidth) {
+    this.canvas = canvas;
+    this.canvasCtx = this.canvas.getContext('2d');
+    this.spritePos = spritePos;
+    this.containerWidth = containerWidth;
+    this.xPos = containerWidth;
+    this.yPos = 0;
+    this.remove = false;
+    this.gap = getRandomNum(Cloud.config.MIN_CLOUD_GAP, Cloud.config.MAX_CLOUD_GAP);
+    this.init();
+}
+
+/**
+ * Static configuration for clouds.
+ */
+Cloud.config = {
+    HEIGHT: 14,
+    MAX_CLOUD_GAP: 400,
+    MAX_SKY_LEVEL: 30,
+    MIN_CLOUD_GAP: 100,
+    MIN_SKY_LEVEL: 71,
+    WIDTH: 46,
+};
+
+Cloud.prototype = {
+    /**
+     * Initializes the cloud with a random vertical position.
+     */
+    init: function () {
+        this.yPos = getRandomNum(Cloud.config.MAX_SKY_LEVEL, Cloud.config.MIN_SKY_LEVEL);
+        this.draw();
+    },
+
+    /**
+     * Draws the cloud on the canvas.
+     */
+    draw: function () {
+        this.canvasCtx.save();
+        let sourceWidth = Cloud.config.WIDTH;
+        let sourceHeight = Cloud.config.HEIGHT;
+
+        if (IS_HIDPI) {
+            sourceWidth *= 2;
+            sourceHeight *= 2;
+        }
+
+        this.canvasCtx.drawImage(
+            Runner.imageSprite,
+            this.spritePos.x, this.spritePos.y,
+            sourceWidth, sourceHeight,
+            this.xPos, this.yPos,
+            Cloud.config.WIDTH, Cloud.config.HEIGHT
+        );
+
+        this.canvasCtx.restore();
+    },
+
+    /**
+     * Updates the cloud's position and redraws it.
+     * @param {number} speed The speed at which the cloud moves.
+     */
+    update: function (speed) {
+        if (!this.remove) {
+            this.xPos -= Math.ceil(speed);
+            this.draw();
+
+            if (!this.isVisible()) {
+                this.remove = true;
+            }
+        }
+    },
+
+    /**
+     * Checks if the cloud is still visible on the screen.
+     * @returns {boolean}
+     */
+    isVisible: function () {
+        return this.xPos + Cloud.config.WIDTH > 0;
+    }
+};
+
+
+// =================================================================================
+// HorizonLine Class
+// Handles the drawing and scrolling of the horizon line.
+// =================================================================================
+
+/**
+ * Horizon line constructor.
+ * @param {HTMLCanvasElement} canvas The game's canvas element.
+ * @param {Object} spritePos The sprite coordinates for the horizon line image.
+ */
+function HorizonLine(canvas, spritePos) {
+    this.spritePos = spritePos;
+    this.canvas = canvas;
+    this.canvasCtx = this.canvas.getContext('2d');
+    this.sourceDimensions = {};
+    this.dimensions = HorizonLine.dimensions;
+    this.sourceXPos = [this.spritePos.x, this.spritePos.x + this.dimensions.WIDTH];
+    this.xPos = [];
+    this.yPos = 0;
+    this.bumpThreshold = 0.5;
+    this.setSourceDimensions();
+    this.draw();
+}
+
+/**
+ * Static dimensions for the horizon line.
+ */
+HorizonLine.dimensions = {
+    WIDTH: 600,
+    HEIGHT: 12,
+    YPOS: 127,
+};
+
+HorizonLine.prototype = {
+    /**
+     * Sets the source dimensions for HiDPI displays.
+     */
+    setSourceDimensions: function () {
+        for (const dimension in this.dimensions) {
+            if (IS_HIDPI) {
+                if (dimension !== 'YPOS') {
+                    this.sourceDimensions[dimension] = this.dimensions[dimension] * 2;
+                }
+            } else {
+                this.sourceDimensions[dimension] = this.dimensions[dimension];
+            }
+        }
+        this.xPos = [0, this.dimensions.WIDTH];
+        this.yPos = this.dimensions.YPOS;
+    },
+
+    /**
+     * Randomly selects a terrain type (flat or bumpy).
+     */
+    getRandomType: function () {
+        return Math.random() > this.bumpThreshold ? this.dimensions.WIDTH : 0;
+    },
+
+    /**
+     * Draws the two horizon line segments to create an infinite scroll illusion.
+     */
+    draw: function () {
+        this.canvasCtx.drawImage(
+            Runner.imageSprite, this.sourceXPos[0], this.spritePos.y,
+            this.sourceDimensions.WIDTH, this.sourceDimensions.HEIGHT,
+            this.xPos[0], this.yPos,
+            this.dimensions.WIDTH, this.dimensions.HEIGHT
+        );
+        this.canvasCtx.drawImage(
+            Runner.imageSprite, this.sourceXPos[1], this.spritePos.y,
+            this.sourceDimensions.WIDTH, this.sourceDimensions.HEIGHT,
+            this.xPos[1], this.yPos,
+            this.dimensions.WIDTH, this.dimensions.HEIGHT
+        );
+    },
+
+    /**
+     * Updates the position of the horizon line.
+     * @param {number} deltaTime Time elapsed since the last frame.
+     * @param {number} speed The current game speed.
+     */
+    update: function (deltaTime, speed) {
+        const increment = Math.floor(speed * (FPS / 1000) * deltaTime);
+        if (this.xPos[0] <= -this.dimensions.WIDTH) {
+            this.xPos[0] += this.dimensions.WIDTH * 2;
+            this.xPos[1] = this.xPos[0] - this.dimensions.WIDTH;
+            this.sourceXPos[0] = this.getRandomType() + this.spritePos.x;
+        }
+        this.xPos[0] -= increment;
+        this.xPos[1] = this.xPos[0] + this.dimensions.WIDTH;
+        this.draw();
+    },
+
+    /**
+     * Resets the horizon line to its initial position.
+     */
+    reset: function () {
+        this.xPos[0] = 0;
+        this.xPos[1] = this.dimensions.WIDTH;
+    }
+};
+
+
+// =================================================================================
+// GameOverPanel Class
+// Displays the "Game Over" message and restart button.
+// =================================================================================
+
+/**
+ * Game Over panel constructor.
+ * @param {HTMLCanvasElement} canvas
+ * @param {Object} textSprite Sprite coordinates for the "Game Over" text.
+ * @param {Object} restartSprite Sprite coordinates for the restart button.
+ * @param {Object} dimensions The dimensions of the canvas.
+ */
+function GameOverPanel(canvas, textSprite, restartSprite, dimensions) {
+    this.canvas = canvas;
+    this.canvasCtx = canvas.getContext('2d');
+    this.canvasDimensions = dimensions;
+    this.textImgPos = textSprite;
+    this.restartImgPos = restartSprite;
+    this.draw();
+}
+
+/**
+ * Static dimensions for the panel's elements.
+ */
+GameOverPanel.dimensions = {
+    TEXT_WIDTH: 191,
+    TEXT_HEIGHT: 11,
+    RESTART_WIDTH: 36,
+    RESTART_HEIGHT: 32
+};
+
+GameOverPanel.prototype = {
+    /**
+     * Updates the panel's dimensions upon screen resize.
+     * @param {number} width The new width of the canvas.
+     */
+    updateDimensions: function (width) {
+        this.canvasDimensions.WIDTH = width;
+        this.draw();
+    },
+
+    /**
+     * Draws the "Game Over" text and the restart button.
+     */
+    draw: function () {
+        const dimensions = GameOverPanel.dimensions;
+        let textSourceWidth = dimensions.TEXT_WIDTH;
+        let textSourceHeight = dimensions.TEXT_HEIGHT;
+        let restartSourceWidth = dimensions.RESTART_WIDTH;
+        let restartSourceHeight = dimensions.RESTART_HEIGHT;
+
+        if (IS_HIDPI) {
+            textSourceWidth *= 2;
+            textSourceHeight *= 2;
+            restartSourceWidth *= 2;
+            restartSourceHeight *= 2;
+        }
+
+        const textX = this.canvasDimensions.WIDTH / 2 - dimensions.TEXT_WIDTH / 2;
+        const textY = Math.round((this.canvasDimensions.HEIGHT - 25) / 3);
+        const restartX = this.canvasDimensions.WIDTH / 2 - dimensions.RESTART_WIDTH / 2;
+        const restartY = textY + dimensions.TEXT_HEIGHT + 20;
+
+        this.canvasCtx.save();
+        this.canvasCtx.drawImage(
+            Runner.imageSprite, this.textImgPos.x, this.textImgPos.y,
+            textSourceWidth, textSourceHeight,
+            textX, textY,
+            dimensions.TEXT_WIDTH, dimensions.TEXT_HEIGHT
+        );
+        this.canvasCtx.drawImage(
+            Runner.imageSprite, this.restartImgPos.x, this.restartImgPos.y,
+            restartSourceWidth, restartSourceHeight,
+            restartX, restartY,
+            dimensions.RESTART_WIDTH, dimensions.RESTART_HEIGHT
+        );
+        this.canvasCtx.restore();
+    }
+};
+
+
+// =================================================================================
+// DistanceMeter Class
+// Manages the display of the current score and high score.
+// =================================================================================
+
+/**
+ * Distance meter constructor.
+ * @param {HTMLCanvasElement} canvas
+ * @param {Object} spritePos Sprite coordinates for the number digits.
+ * @param {number} canvasWidth The width of the canvas.
+ */
+function DistanceMeter(canvas, spritePos, canvasWidth) {
+    this.canvas = canvas;
+    this.canvasCtx = canvas.getContext('2d');
+    this.image = Runner.imageSprite;
+    this.spritePos = spritePos;
+    this.x = 0;
+    this.y = 5;
+    this.currentDistance = 0;
+    this.maxScore = 0;
+    this.highScore = '0';
+    this.digits = [];
+    this.achievement = false;
+    this.defaultString = '';
+    this.flashTimer = 0;
+    this.flashIterations = 0;
+    this.config = DistanceMeter.config;
+    this.maxScoreUnits = this.config.MAX_DISTANCE_UNITS;
+    this.init(canvasWidth);
+}
+
+/** Static configuration for the distance meter
+*/
+DistanceMeter.config = {
+    MAX_DISTANCE_UNITS: 5,
+    ACHIEVEMENT_DISTANCE: 100,
+    COEFFICIENT: 0.025,
+    FLASH_DURATION: 1000 / 4, // 250ms
+    FLASH_ITERATIONS: 3,
+};
+
+DistanceMeter.dimensions = {
+    WIDTH: 10,
+    HEIGHT: 13,
+    DEST_WIDTH: 11,
+};
+
     // --- DistanceMeter Class Prototype (FIXED) ---
     DistanceMeter.prototype = {
     init: function (width) {
