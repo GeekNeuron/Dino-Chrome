@@ -4274,7 +4274,7 @@ script.js:
  * found in the LICENSE file.
  */
 
-// Anotated for better readability and understanding by AR Moghimi.
+// Anotated and fixed for a lightweight, stable experience by AR Moghimi & Gemini.
 
 (function () {
     'use strict';
@@ -4407,7 +4407,7 @@ script.js:
         this.audioContext = null;
         this.soundFx = {};
         this.gameOverPanel = null;
-        this.icon = document.querySelector('.icon-offline');
+        this.mainContent = document.getElementById('main-content'); // ADDED: For icon hiding
 
         this.loadImages();
     }
@@ -4488,12 +4488,12 @@ script.js:
             }
         },
 
+        // FIX: Correctly implemented async audio loading
         async loadSounds() {
             if (!this.audioContext) {
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             }
 
-            // Resume audio context if it's suspended (required by modern browsers)
             if (this.audioContext.state === 'suspended') {
                 await this.audioContext.resume();
             }
@@ -4501,7 +4501,7 @@ script.js:
             for (const soundName in Runner.sounds) {
                 const soundId = Runner.sounds[soundName];
                 const soundElement = document.getElementById(soundId);
-                if (soundElement) {
+                if (soundElement && !this.soundFx[soundId]) { // Load only once
                     try {
                         const response = await fetch(soundElement.src);
                         const arrayBuffer = await response.arrayBuffer();
@@ -4576,17 +4576,18 @@ script.js:
                 }
             }
         },
-
+        
+        // ADDED: Simplified playIntro to manage game state
         playIntro() {
             if (!this.activated && !this.crashed) {
                 this.playingIntro = true;
                 this.tRex.playingIntro = true;
-                this.icon.style.opacity = '0';
+                this.mainContent.classList.add('hidden'); // Hide the initial icon
                 this.containerEl.style.webkitAnimation = 'intro .4s ease-out 1 both';
                 this.containerEl.style.width = this.dimensions.WIDTH + 'px';
-
                 this.playing = true;
                 this.activated = true;
+                this.startGame();
             } else if (this.crashed) {
                 this.restart();
             }
@@ -4619,17 +4620,9 @@ script.js:
 
                 this.runningTime += deltaTime;
                 const hasObstacles = this.runningTime > this.config.CLEAR_TIME;
-
-                if (this.tRex.jumpCount === 1 && !this.playingIntro) {
-                    this.playIntro();
-                }
                 
-                if (this.playingIntro) {
-                    this.horizon.update(0, this.currentSpeed, hasObstacles);
-                } else {
-                    deltaTime = !this.activated ? 0 : deltaTime;
-                    this.horizon.update(deltaTime, this.currentSpeed, hasObstacles, this.inverted);
-                }
+                deltaTime = !this.activated ? 0 : deltaTime;
+                this.horizon.update(deltaTime, this.currentSpeed, hasObstacles, this.inverted);
 
                 const collision = hasObstacles && checkForCollision(this.horizon.obstacles[0], this.tRex);
                 
@@ -4680,18 +4673,17 @@ script.js:
         
         onKeyDown(e) {
             if (this.crashed || this.paused) {
-                 if(e.keyCode === Runner.keycodes.JUMP['32'] || e.type === 'touchstart' || e.type === 'pointerdown'){
-                    this.restart();
+                 if(Runner.keycodes.JUMP[e.keyCode] || e.type === 'touchstart' || e.type === 'pointerdown'){
+                     this.restart();
                  }
-                return;
+                 return;
             }
 
             if (Runner.keycodes.JUMP[e.keyCode] || e.type === 'touchstart' || e.type === 'pointerdown') {
                 e.preventDefault();
                 if (!this.playing) {
-                    this.loadSounds();
-                    this.activated = true;
-                    this.playing = true;
+                    this.loadSounds(); // Load sounds on first interaction
+                    this.playIntro(); // Start the game
                 }
                 if (!this.tRex.jumping && !this.tRex.ducking) {
                     this.playSound(this.soundFx.BUTTON_PRESS);
@@ -4778,7 +4770,7 @@ script.js:
                 this.setSpeed(this.config.SPEED);
                 this.time = getTimeStamp();
                 this.clearCanvas();
-                this.distanceMeter.reset();
+                this.distanceMeter.reset(this.highestScore); // Pass high score to reset
                 this.horizon.reset();
                 this.tRex.reset();
                 this.playSound(this.soundFx.BUTTON_PRESS);
@@ -5043,7 +5035,7 @@ script.js:
                 this.size = 1;
             }
             this.width = this.typeConfig.width * this.size;
-            this.xPos = this.dimensions.WIDTH - this.width;
+            // this.xPos = this.dimensions.WIDTH - this.width; // This was a bug, should start off-screen
             if (Array.isArray(this.typeConfig.yPos)) {
                 this.yPos = this.typeConfig.yPos[getRandomNum(0, this.typeConfig.yPos.length - 1)];
             } else {
@@ -5145,15 +5137,13 @@ script.js:
                 this.updateObstacles(deltaTime, currentSpeed);
             }
         },
-        updateClouds: function (deltaTime) {
-            const speed = this.config.BG_CLOUD_SPEED / 1000 * deltaTime * FPS;
-            if (this.clouds.length < this.config.MAX_CLOUDS && Math.random() < this.cloudFrequency) {
-                this.addCloud();
-            }
-            this.clouds = this.clouds.filter(cloud => {
-                cloud.update(speed);
-                return !cloud.remove;
-            });
+        updateClouds: function (deltaTime, speed) {
+             const cloudSpeed = this.config.BG_CLOUD_SPEED * speed / 1000 * deltaTime * FPS / 1000;
+             this.addCloud();
+             this.clouds = this.clouds.filter(cloud => {
+                 cloud.update(cloudSpeed);
+                 return !cloud.remove;
+             });
         },
         updateObstacles: function (deltaTime, currentSpeed) {
             const updatedObstacles = this.obstacles.slice(0);
@@ -5203,455 +5193,354 @@ script.js:
             this.horizonLine.reset();
         },
         addCloud: function () {
-            this.clouds.push(new Cloud(this.canvas, this.spritePos.CLOUD, this.dimensions.WIDTH));
+            if (this.clouds.length < this.config.MAX_CLOUDS && Math.random() < this.cloudFrequency) {
+                 this.clouds.push(new Cloud(this.canvas, this.spritePos.CLOUD, this.dimensions.WIDTH));
+            }
         },
     };
 
     // =================================================================================
-// Cloud Class
-// Handles the creation, movement, and removal of clouds in the background.
-// =================================================================================
-
-/**
- * Cloud object constructor.
- * @param {HTMLCanvasElement} canvas The game's canvas element.
- * @param {Object} spritePos The sprite coordinates for the cloud image.
- * @param {number} containerWidth The width of the game container.
- */
-function Cloud(canvas, spritePos, containerWidth) {
-    this.canvas = canvas;
-    this.canvasCtx = this.canvas.getContext('2d');
-    this.spritePos = spritePos;
-    this.containerWidth = containerWidth;
-    this.xPos = containerWidth;
-    this.yPos = 0;
-    this.remove = false;
-    this.gap = getRandomNum(Cloud.config.MIN_CLOUD_GAP, Cloud.config.MAX_CLOUD_GAP);
-    this.init();
-}
-
-/**
- * Static configuration for clouds.
- */
-Cloud.config = {
-    HEIGHT: 14,
-    MAX_CLOUD_GAP: 400,
-    MAX_SKY_LEVEL: 30,
-    MIN_CLOUD_GAP: 100,
-    MIN_SKY_LEVEL: 71,
-    WIDTH: 46,
-};
-
-Cloud.prototype = {
-    /**
-     * Initializes the cloud with a random vertical position.
-     */
-    init: function () {
-        this.yPos = getRandomNum(Cloud.config.MAX_SKY_LEVEL, Cloud.config.MIN_SKY_LEVEL);
-        this.draw();
-    },
-
-    /**
-     * Draws the cloud on the canvas.
-     */
-    draw: function () {
-        this.canvasCtx.save();
-        let sourceWidth = Cloud.config.WIDTH;
-        let sourceHeight = Cloud.config.HEIGHT;
-
-        if (IS_HIDPI) {
-            sourceWidth *= 2;
-            sourceHeight *= 2;
-        }
-
-        this.canvasCtx.drawImage(
-            Runner.imageSprite,
-            this.spritePos.x, this.spritePos.y,
-            sourceWidth, sourceHeight,
-            this.xPos, this.yPos,
-            Cloud.config.WIDTH, Cloud.config.HEIGHT
-        );
-
-        this.canvasCtx.restore();
-    },
-
-    /**
-     * Updates the cloud's position and redraws it.
-     * @param {number} speed The speed at which the cloud moves.
-     */
-    update: function (speed) {
-        if (!this.remove) {
-            this.xPos -= Math.ceil(speed);
+    // Cloud Class
+    // =================================================================================
+    function Cloud(canvas, spritePos, containerWidth) {
+        this.canvas = canvas;
+        this.canvasCtx = this.canvas.getContext('2d');
+        this.spritePos = spritePos;
+        this.containerWidth = containerWidth;
+        this.xPos = containerWidth;
+        this.yPos = 0;
+        this.remove = false;
+        this.gap = getRandomNum(Cloud.config.MIN_CLOUD_GAP, Cloud.config.MAX_CLOUD_GAP);
+        this.init();
+    }
+    Cloud.config = {
+        HEIGHT: 14,
+        MAX_CLOUD_GAP: 400,
+        MAX_SKY_LEVEL: 30,
+        MIN_CLOUD_GAP: 100,
+        MIN_SKY_LEVEL: 71,
+        WIDTH: 46,
+    };
+    // FIX: Added missing methods to Cloud prototype
+    Cloud.prototype = {
+        init: function () {
+            this.yPos = getRandomNum(Cloud.config.MAX_SKY_LEVEL, Cloud.config.MIN_SKY_LEVEL);
             this.draw();
-
-            if (!this.isVisible()) {
-                this.remove = true;
-            }
-        }
-    },
-
-    /**
-     * Checks if the cloud is still visible on the screen.
-     * @returns {boolean}
-     */
-    isVisible: function () {
-        return this.xPos + Cloud.config.WIDTH > 0;
-    }
-};
-
-
-// =================================================================================
-// HorizonLine Class
-// Handles the drawing and scrolling of the horizon line.
-// =================================================================================
-
-/**
- * Horizon line constructor.
- * @param {HTMLCanvasElement} canvas The game's canvas element.
- * @param {Object} spritePos The sprite coordinates for the horizon line image.
- */
-function HorizonLine(canvas, spritePos) {
-    this.spritePos = spritePos;
-    this.canvas = canvas;
-    this.canvasCtx = this.canvas.getContext('2d');
-    this.sourceDimensions = {};
-    this.dimensions = HorizonLine.dimensions;
-    this.sourceXPos = [this.spritePos.x, this.spritePos.x + this.dimensions.WIDTH];
-    this.xPos = [];
-    this.yPos = 0;
-    this.bumpThreshold = 0.5;
-    this.setSourceDimensions();
-    this.draw();
-}
-
-/**
- * Static dimensions for the horizon line.
- */
-HorizonLine.dimensions = {
-    WIDTH: 600,
-    HEIGHT: 12,
-    YPOS: 127,
-};
-
-HorizonLine.prototype = {
-    /**
-     * Sets the source dimensions for HiDPI displays.
-     */
-    setSourceDimensions: function () {
-        for (const dimension in this.dimensions) {
-            if (IS_HIDPI) {
-                if (dimension !== 'YPOS') {
-                    this.sourceDimensions[dimension] = this.dimensions[dimension] * 2;
-                }
-            } else {
-                this.sourceDimensions[dimension] = this.dimensions[dimension];
-            }
-        }
-        this.xPos = [0, this.dimensions.WIDTH];
-        this.yPos = this.dimensions.YPOS;
-    },
-
-    /**
-     * Randomly selects a terrain type (flat or bumpy).
-     */
-    getRandomType: function () {
-        return Math.random() > this.bumpThreshold ? this.dimensions.WIDTH : 0;
-    },
-
-    /**
-     * Draws the two horizon line segments to create an infinite scroll illusion.
-     */
-    draw: function () {
-        this.canvasCtx.drawImage(
-            Runner.imageSprite, this.sourceXPos[0], this.spritePos.y,
-            this.sourceDimensions.WIDTH, this.sourceDimensions.HEIGHT,
-            this.xPos[0], this.yPos,
-            this.dimensions.WIDTH, this.dimensions.HEIGHT
-        );
-        this.canvasCtx.drawImage(
-            Runner.imageSprite, this.sourceXPos[1], this.spritePos.y,
-            this.sourceDimensions.WIDTH, this.sourceDimensions.HEIGHT,
-            this.xPos[1], this.yPos,
-            this.dimensions.WIDTH, this.dimensions.HEIGHT
-        );
-    },
-
-    /**
-     * Updates the position of the horizon line.
-     * @param {number} deltaTime Time elapsed since the last frame.
-     * @param {number} speed The current game speed.
-     */
-    update: function (deltaTime, speed) {
-        const increment = Math.floor(speed * (FPS / 1000) * deltaTime);
-        if (this.xPos[0] <= -this.dimensions.WIDTH) {
-            this.xPos[0] += this.dimensions.WIDTH * 2;
-            this.xPos[1] = this.xPos[0] - this.dimensions.WIDTH;
-            this.sourceXPos[0] = this.getRandomType() + this.spritePos.x;
-        }
-        this.xPos[0] -= increment;
-        this.xPos[1] = this.xPos[0] + this.dimensions.WIDTH;
-        this.draw();
-    },
-
-    /**
-     * Resets the horizon line to its initial position.
-     */
-    reset: function () {
-        this.xPos[0] = 0;
-        this.xPos[1] = this.dimensions.WIDTH;
-    }
-};
-
-
-// =================================================================================
-// GameOverPanel Class
-// Displays the "Game Over" message and restart button.
-// =================================================================================
-
-/**
- * Game Over panel constructor.
- * @param {HTMLCanvasElement} canvas
- * @param {Object} textSprite Sprite coordinates for the "Game Over" text.
- * @param {Object} restartSprite Sprite coordinates for the restart button.
- * @param {Object} dimensions The dimensions of the canvas.
- */
-function GameOverPanel(canvas, textSprite, restartSprite, dimensions) {
-    this.canvas = canvas;
-    this.canvasCtx = canvas.getContext('2d');
-    this.canvasDimensions = dimensions;
-    this.textImgPos = textSprite;
-    this.restartImgPos = restartSprite;
-    this.draw();
-}
-
-/**
- * Static dimensions for the panel's elements.
- */
-GameOverPanel.dimensions = {
-    TEXT_WIDTH: 191,
-    TEXT_HEIGHT: 11,
-    RESTART_WIDTH: 36,
-    RESTART_HEIGHT: 32
-};
-
-GameOverPanel.prototype = {
-    /**
-     * Updates the panel's dimensions upon screen resize.
-     * @param {number} width The new width of the canvas.
-     */
-    updateDimensions: function (width) {
-        this.canvasDimensions.WIDTH = width;
-        this.draw();
-    },
-
-    /**
-     * Draws the "Game Over" text and the restart button.
-     */
-    draw: function () {
-        const dimensions = GameOverPanel.dimensions;
-        let textSourceWidth = dimensions.TEXT_WIDTH;
-        let textSourceHeight = dimensions.TEXT_HEIGHT;
-        let restartSourceWidth = dimensions.RESTART_WIDTH;
-        let restartSourceHeight = dimensions.RESTART_HEIGHT;
-
-        if (IS_HIDPI) {
-            textSourceWidth *= 2;
-            textSourceHeight *= 2;
-            restartSourceWidth *= 2;
-            restartSourceHeight *= 2;
-        }
-
-        const textX = this.canvasDimensions.WIDTH / 2 - dimensions.TEXT_WIDTH / 2;
-        const textY = Math.round((this.canvasDimensions.HEIGHT - 25) / 3);
-        const restartX = this.canvasDimensions.WIDTH / 2 - dimensions.RESTART_WIDTH / 2;
-        const restartY = textY + dimensions.TEXT_HEIGHT + 20;
-
-        this.canvasCtx.save();
-        this.canvasCtx.drawImage(
-            Runner.imageSprite, this.textImgPos.x, this.textImgPos.y,
-            textSourceWidth, textSourceHeight,
-            textX, textY,
-            dimensions.TEXT_WIDTH, dimensions.TEXT_HEIGHT
-        );
-        this.canvasCtx.drawImage(
-            Runner.imageSprite, this.restartImgPos.x, this.restartImgPos.y,
-            restartSourceWidth, restartSourceHeight,
-            restartX, restartY,
-            dimensions.RESTART_WIDTH, dimensions.RESTART_HEIGHT
-        );
-        this.canvasCtx.restore();
-    }
-};
-
-
-// =================================================================================
-// DistanceMeter Class
-// Manages the display of the current score and high score.
-// =================================================================================
-
-/**
- * Distance meter constructor.
- * @param {HTMLCanvasElement} canvas
- * @param {Object} spritePos Sprite coordinates for the number digits.
- * @param {number} canvasWidth The width of the canvas.
- */
-function DistanceMeter(canvas, spritePos, canvasWidth) {
-    this.canvas = canvas;
-    this.canvasCtx = canvas.getContext('2d');
-    this.image = Runner.imageSprite;
-    this.spritePos = spritePos;
-    this.x = 0;
-    this.y = 5;
-    this.currentDistance = 0;
-    this.maxScore = 0;
-    this.highScore = '0';
-    this.digits = [];
-    this.achievement = false;
-    this.defaultString = '';
-    this.flashTimer = 0;
-    this.flashIterations = 0;
-    this.config = DistanceMeter.config;
-    this.maxScoreUnits = this.config.MAX_DISTANCE_UNITS;
-    this.init(canvasWidth);
-}
-
-/** Static configuration for the distance meter
-*/
-DistanceMeter.config = {
-    MAX_DISTANCE_UNITS: 5,
-    ACHIEVEMENT_DISTANCE: 100,
-    COEFFICIENT: 0.025,
-    FLASH_DURATION: 1000 / 4, // 250ms
-    FLASH_ITERATIONS: 3,
-};
-
-DistanceMeter.dimensions = {
-    WIDTH: 10,
-    HEIGHT: 13,
-    DEST_WIDTH: 11,
-};
-
-    // --- DistanceMeter Class Prototype (FIXED) ---
-    DistanceMeter.prototype = {
-    init: function (width) {
-        let maxScoreStr = '';
-        this.calcXPos(width);
-        this.maxScore = this.maxScoreUnits;
-        for (let i = 0; i < this.maxScoreUnits; i++) {
-            this.draw(i, 0);
-            this.defaultString += '0';
-            maxScoreStr += '9';
-        }
-        this.highScore = '0'; // FIX: Initialize as a string
-        this.maxScore = parseInt(maxScoreStr);
-    },
-
-    calcXPos: function (canvasWidth) {
-        this.x = canvasWidth - (DistanceMeter.dimensions.DEST_WIDTH * (this.maxScoreUnits + 1));
-    },
-
-    draw: function (digitPos, value, opt_highScore) {
-        let sourceWidth = DistanceMeter.dimensions.WIDTH;
-        let sourceHeight = DistanceMeter.dimensions.HEIGHT;
-        let sourceX = DistanceMeter.dimensions.WIDTH * value;
-
-        if (IS_HIDPI) {
-            sourceWidth *= 2;
-            sourceHeight *= 2;
-            sourceX *= 2;
-        }
-
-        sourceX += this.spritePos.x;
-        const sourceY = this.spritePos.y;
-
-        // Position HIGH SCORE (HI) text correctly
-        const targetX = opt_highScore ? this.x - (this.maxScoreUnits * 2.5) : this.x;
-
-        this.canvasCtx.save();
-        this.canvasCtx.globalAlpha = .8;
-        this.canvasCtx.drawImage(
-            this.image,
-            sourceX, sourceY,
-            sourceWidth, sourceHeight,
-            targetX + digitPos * DistanceMeter.dimensions.DEST_WIDTH, this.y,
-            DistanceMeter.dimensions.WIDTH, DistanceMeter.dimensions.HEIGHT
-        );
-        this.canvasCtx.restore();
-    },
-
-    getActualDistance: function (distance) {
-        return distance ? Math.round(distance * this.config.COEFFICIENT) : 0;
-    },
-
-    update: function (deltaTime, distance) {
-        let paint = true;
-        let playSound = false;
-
-        if (this.achievement) {
-            if (this.flashIterations <= this.config.FLASH_ITERATIONS) {
-                this.flashTimer += deltaTime;
-                if (this.flashTimer < this.config.FLASH_DURATION) {
-                    paint = false;
-                } else if (this.flashTimer > (this.config.FLASH_DURATION * 2)) {
-                    this.flashTimer = 0;
-                    this.flashIterations++;
-                }
-            } else {
-                this.achievement = false;
-                this.flashIterations = 0;
-                this.flashTimer = 0;
-            }
-        }
-
-        distance = this.getActualDistance(distance);
-
-        if (distance > 0) {
-            if (distance % this.config.ACHIEVEMENT_DISTANCE === 0) {
-                this.achievement = true;
-                this.flashTimer = 0;
-                playSound = true;
-            }
-            const distanceStr = (this.defaultString + distance).slice(-this.maxScoreUnits);
-            this.digits = distanceStr.split('');
-        } else {
-            this.digits = this.defaultString.split('');
-        }
-
-        if (paint) {
-            for (let i = this.digits.length - 1; i >= 0; i--) {
-                this.draw(i, parseInt(this.digits[i]));
-            }
-        }
-
-        this.drawHighScore();
-        return playSound;
-    },
-
-    setHighScore: function (distance) {
-        distance = this.getActualDistance(distance);
-        const highScoreStr = (this.defaultString + distance).slice(-this.maxScoreUnits);
-        // FIX: Replicate original "HI" score prefix by using an array
-        this.highScore = ['10', '11', ''].concat(highScoreStr.split(''));
-    },
-
-    drawHighScore: function () {
-        // FIX: Handle both string and array types for highScore
-        // parseInt on an array like ['10', '11', ...] correctly evaluates to a number > 0
-        if (parseInt(this.highScore, 10) > 0) {
+        },
+        draw: function () {
             this.canvasCtx.save();
-            this.canvasCtx.globalAlpha = 0.8;
-            for (let i = 0; i < this.highScore.length; i++) {
-                this.draw(i, parseInt(this.highScore[i], 10), true);
+            let sourceWidth = Cloud.config.WIDTH;
+            let sourceHeight = Cloud.config.HEIGHT;
+
+            if (IS_HIDPI) {
+                sourceWidth *= 2;
+                sourceHeight *= 2;
             }
+
+            this.canvasCtx.drawImage(
+                Runner.imageSprite,
+                this.spritePos.x, this.spritePos.y,
+                sourceWidth, sourceHeight,
+                this.xPos, this.yPos,
+                Cloud.config.WIDTH, Cloud.config.HEIGHT
+            );
+
+            this.canvasCtx.restore();
+        },
+        update: function (speed) {
+            if (!this.remove) {
+                this.xPos -= Math.ceil(speed);
+                this.draw();
+
+                if (!this.isVisible()) {
+                    this.remove = true;
+                }
+            }
+        },
+        isVisible: function () {
+            return this.xPos + Cloud.config.WIDTH > 0;
+        }
+    };
+
+
+    // =================================================================================
+    // HorizonLine Class
+    // =================================================================================
+    function HorizonLine(canvas, spritePos) {
+        this.spritePos = spritePos;
+        this.canvas = canvas;
+        this.canvasCtx = this.canvas.getContext('2d');
+        this.sourceDimensions = {};
+        this.dimensions = HorizonLine.dimensions;
+        this.sourceXPos = [this.spritePos.x, this.spritePos.x + this.dimensions.WIDTH];
+        this.xPos = [];
+        this.yPos = 0;
+        this.bumpThreshold = 0.5;
+        this.setSourceDimensions();
+        this.draw();
+    }
+    HorizonLine.dimensions = {
+        WIDTH: 600,
+        HEIGHT: 12,
+        YPOS: 127,
+    };
+    // FIX: Re-implemented correct horizon scrolling logic
+    HorizonLine.prototype = {
+        setSourceDimensions: function () {
+            for (const dimension in this.dimensions) {
+                if (IS_HIDPI) {
+                    if (dimension !== 'YPOS') {
+                        this.sourceDimensions[dimension] = this.dimensions[dimension] * 2;
+                    }
+                } else {
+                    this.sourceDimensions[dimension] = this.dimensions[dimension];
+                }
+                 this.dimensions[dimension] = this.dimensions[dimension]; // Keep original dimensions
+            }
+            this.xPos = [0, this.dimensions.WIDTH];
+            this.yPos = this.dimensions.YPOS;
+        },
+        getRandomType: function () {
+            return Math.random() > this.bumpThreshold ? this.dimensions.WIDTH : 0;
+        },
+        draw: function () {
+            this.canvasCtx.drawImage(
+                Runner.imageSprite, this.spritePos.x, this.spritePos.y,
+                this.sourceDimensions.WIDTH, this.sourceDimensions.HEIGHT,
+                this.xPos[0], this.yPos,
+                this.dimensions.WIDTH, this.dimensions.HEIGHT
+            );
+            this.canvasCtx.drawImage(
+                Runner.imageSprite, this.spritePos.x + this.sourceDimensions.WIDTH, this.spritePos.y,
+                this.sourceDimensions.WIDTH, this.sourceDimensions.HEIGHT,
+                this.xPos[1], this.yPos,
+                this.dimensions.WIDTH, this.dimensions.HEIGHT
+            );
+        },
+        update: function (deltaTime, speed) {
+            const increment = Math.floor(speed * (FPS / 1000) * deltaTime);
+            this.xPos[0] -= increment;
+            this.xPos[1] -= increment;
+
+            if (this.xPos[0] <= -this.dimensions.WIDTH) {
+                this.xPos[0] += this.dimensions.WIDTH * 2;
+            }
+            if (this.xPos[1] <= -this.dimensions.WIDTH) {
+                 this.xPos[1] = this.xPos[0] + this.dimensions.WIDTH;
+            }
+            this.draw();
+        },
+        reset: function () {
+            this.xPos[0] = 0;
+            this.xPos[1] = this.dimensions.WIDTH;
+        }
+    };
+
+
+    // =================================================================================
+    // GameOverPanel Class
+    // =================================================================================
+    function GameOverPanel(canvas, textSprite, restartSprite, dimensions) {
+        this.canvas = canvas;
+        this.canvasCtx = canvas.getContext('2d');
+        this.canvasDimensions = dimensions;
+        this.textImgPos = textSprite;
+        this.restartImgPos = restartSprite;
+    }
+    GameOverPanel.dimensions = {
+        TEXT_WIDTH: 191,
+        TEXT_HEIGHT: 11,
+        RESTART_WIDTH: 36,
+        RESTART_HEIGHT: 32
+    };
+    // ADDED: A functional GameOverPanel
+    GameOverPanel.prototype = {
+        updateDimensions: function (width) {
+            this.canvasDimensions.WIDTH = width;
+            this.draw();
+        },
+        draw: function () {
+            const dimensions = GameOverPanel.dimensions;
+            let textSourceWidth = dimensions.TEXT_WIDTH;
+            let textSourceHeight = dimensions.TEXT_HEIGHT;
+            let restartSourceWidth = dimensions.RESTART_WIDTH;
+            let restartSourceHeight = dimensions.RESTART_HEIGHT;
+
+            if (IS_HIDPI) {
+                textSourceWidth *= 2;
+                textSourceHeight *= 2;
+                restartSourceWidth *= 2;
+                restartSourceHeight *= 2;
+            }
+
+            const textX = this.canvasDimensions.WIDTH / 2 - dimensions.TEXT_WIDTH / 2;
+            const textY = Math.round((this.canvasDimensions.HEIGHT - 25) / 3);
+            const restartX = this.canvasDimensions.WIDTH / 2 - dimensions.RESTART_WIDTH / 2;
+            const restartY = textY + dimensions.TEXT_HEIGHT + 20;
+
+            this.canvasCtx.save();
+            // Draw "Game Over"
+            this.canvasCtx.drawImage(
+                Runner.imageSprite, this.textImgPos.x, this.textImgPos.y,
+                textSourceWidth, textSourceHeight,
+                textX, textY,
+                dimensions.TEXT_WIDTH, dimensions.TEXT_HEIGHT
+            );
+            // Draw restart button
+            this.canvasCtx.drawImage(
+                Runner.imageSprite, this.restartImgPos.x, this.restartImgPos.y,
+                restartSourceWidth, restartSourceHeight,
+                restartX, restartY,
+                dimensions.RESTART_WIDTH, dimensions.RESTART_HEIGHT
+            );
             this.canvasCtx.restore();
         }
-    },
-    
-    reset: function () {
-        this.update(0, 0);
+    };
+
+
+    // =================================================================================
+    // DistanceMeter Class
+    // =================================================================================
+    function DistanceMeter(canvas, spritePos, canvasWidth) {
+        this.canvas = canvas;
+        this.canvasCtx = canvas.getContext('2d');
+        this.image = Runner.imageSprite;
+        this.spritePos = spritePos;
+        this.x = 0;
+        this.y = 5;
+        this.currentDistance = 0;
+        this.maxScore = 0;
+        this.highScore = []; // FIX: Use array for HI score
+        this.digits = [];
         this.achievement = false;
+        this.defaultString = '';
+        this.flashTimer = 0;
+        this.flashIterations = 0;
+        this.config = DistanceMeter.config;
+        this.maxScoreUnits = this.config.MAX_DISTANCE_UNITS;
+        this.init(canvasWidth);
     }
-};
+    DistanceMeter.config = {
+        MAX_DISTANCE_UNITS: 5,
+        ACHIEVEMENT_DISTANCE: 100,
+        COEFFICIENT: 0.025,
+        FLASH_DURATION: 1000 / 4,
+        FLASH_ITERATIONS: 3,
+    };
+    DistanceMeter.dimensions = {
+        WIDTH: 10,
+        HEIGHT: 13,
+        DEST_WIDTH: 11,
+    };
+    DistanceMeter.prototype = {
+        init: function (width) {
+            let maxScoreStr = '';
+            this.calcXPos(width);
+            this.maxScore = this.maxScoreUnits;
+            for (let i = 0; i < this.maxScoreUnits; i++) {
+                this.draw(i, 0);
+                this.defaultString += '0';
+                maxScoreStr += '9';
+            }
+            this.maxScore = parseInt(maxScoreStr);
+            this.digits = this.defaultString.split('');
+        },
+        calcXPos: function (canvasWidth) {
+            this.x = canvasWidth - (DistanceMeter.dimensions.DEST_WIDTH * (this.maxScoreUnits + 1));
+        },
+        draw: function (digitPos, value, opt_highScore) {
+            let sourceWidth = DistanceMeter.dimensions.WIDTH;
+            let sourceHeight = DistanceMeter.dimensions.HEIGHT;
+            let sourceX = DistanceMeter.dimensions.WIDTH * value;
+
+            if (IS_HIDPI) {
+                sourceWidth *= 2;
+                sourceHeight *= 2;
+                sourceX *= 2;
+            }
+
+            sourceX += this.spritePos.x;
+            const sourceY = this.spritePos.y;
+
+            const targetX = opt_highScore ? this.x - (this.maxScoreUnits * 11.5) : this.x;
+
+            this.canvasCtx.save();
+            this.canvasCtx.drawImage(
+                this.image,
+                sourceX, sourceY,
+                sourceWidth, sourceHeight,
+                targetX + digitPos * DistanceMeter.dimensions.DEST_WIDTH, this.y,
+                DistanceMeter.dimensions.WIDTH, DistanceMeter.dimensions.HEIGHT
+            );
+            this.canvasCtx.restore();
+        },
+        getActualDistance: function (distance) {
+            return distance ? Math.round(distance * this.config.COEFFICIENT) : 0;
+        },
+        update: function (deltaTime, distance) {
+            let paint = true;
+            let playSound = false;
+
+            if (this.achievement) {
+                 if (this.flashIterations <= this.config.FLASH_ITERATIONS) {
+                     this.flashTimer += deltaTime;
+                     if (this.flashTimer < this.config.FLASH_DURATION) {
+                         paint = false;
+                     } else if (this.flashTimer > (this.config.FLASH_DURATION * 2)) {
+                         this.flashTimer = 0;
+                         this.flashIterations++;
+                     }
+                 } else {
+                     this.achievement = false;
+                     this.flashIterations = 0;
+                     this.flashTimer = 0;
+                 }
+            }
+
+            const actualDistance = this.getActualDistance(distance);
+
+            if (actualDistance > 0) {
+                if (actualDistance % this.config.ACHIEVEMENT_DISTANCE === 0) {
+                    this.achievement = true;
+                    this.flashTimer = 0;
+                    playSound = true;
+                }
+                const distanceStr = (this.defaultString + actualDistance).slice(-this.maxScoreUnits);
+                this.digits = distanceStr.split('');
+            } else {
+                this.digits = this.defaultString.split('');
+            }
+
+            if (paint) {
+                for (let i = this.digits.length - 1; i >= 0; i--) {
+                    this.draw(i, parseInt(this.digits[i]));
+                }
+            }
+            this.drawHighScore();
+            return playSound;
+        },
+        // FIX: Correct high score logic
+        setHighScore: function (distance) {
+            distance = this.getActualDistance(distance);
+            const highScoreStr = (this.defaultString + distance).slice(-this.maxScoreUnits);
+            this.highScore = ['10', '11'].concat(highScoreStr.split('')); // 10 is 'H', 11 is 'I'
+        },
+        drawHighScore: function () {
+            if (this.highScore.length > 0) {
+                this.canvasCtx.save();
+                this.canvasCtx.globalAlpha = 0.8;
+                for (let i = 0; i < this.highScore.length; i++) {
+                    this.draw(i, parseInt(this.highScore[i], 10), true);
+                }
+                this.canvasCtx.restore();
+            }
+        },
+        reset: function(highScore) {
+            this.update(0, 0);
+            this.setHighScore(highScore);
+            this.achievement = false;
+        }
+    };
     
     // --- Sprite Definitions ---
     Runner.spriteDefinition = {
@@ -5869,7 +5758,7 @@ html[dir=rtl].offline .icon-offline {
 
 درخواستم اینه که مشکل صوت رو از فایل اصلی وارد کنی برای رفعش (یا اینکه یک اقدام بهتری بکنی برای اینکه صوت کار کنه)، پروژه سبک شده رو با تزریق کدهای سالم پروژه پایدار درست کنی (نه اینکه تغییر عمیقی انجام بدی)
 میخوام پروژه ای سبک و پایدار باشه
-به دو پروژه اصلی یکپارچه و پروژه پایدار تفکیک شده گوش بده و مشکلات پروژه سبک شده رو حل کن
+مشکلات کنونی پروژه سبک شده اینه که ابرها تو در تو و تکرار شده و سوار شده روی هم هستند و همگام با هم تکان میخورند، شمارنده امتیاز کسب شده در game over نمایش داده نمیشود مانند پروژه پایدار. میخوام دقیقا منطق شمارنده های بالای صفحه و game over پروژه پایدار به پروژه سبک شده منتقل شه
+همچنین نوع نمایش ایکون game over پروژه پایدار نیز عینن انتقال پیدا کنه به پروژه سبک شده
 مشکل صوتش هم حل شه
-شکل خود دایناسور در بازی اجرا میشه همراه با پرش هاش، اما مسیرش پرش داره، ابرها چند لایه روی هم سوار شده و تکرار شدن، پس از سوختن در بازی شمارنده امتیازات مانند پروژه های اصلی یکپارچه و پروژه تفکیک شده عمل نمیکند و همچنین پس از سوختن در بازی ایکون وسط که به استارت دوباره اشاره داره به درستی نمایش داده نمیشه
 فعلا بررسی عمیق کن برای مشکلات و خطاها و کمبودهای موجود، در مرحله بعدی اگه خواستم برای پایدار کردنش اقدام میکنیم
