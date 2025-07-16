@@ -763,13 +763,16 @@ Runner.prototype = {
             this.audioContext = new AudioContext();
         }
         
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+            await this.audioContext.resume();
+        }
+        
         if (this.audioContext) {
             const soundSources = Object.values(Runner.sounds);
             const soundNames = Object.keys(Runner.sounds);
 
             for (let i = 0; i < soundSources.length; i++) {
-                const soundName = soundNames[i].toUpperCase();
-                const path = document.getElementById(`offline-sound-${soundName.toLowerCase().replace(/_/g, '-')}`).src;
+                const path = document.getElementById(`offline-sound-${soundNames[i].toLowerCase().replace(/_/g, '-')}`).src;
 
                 try {
                     const response = await fetch(path);
