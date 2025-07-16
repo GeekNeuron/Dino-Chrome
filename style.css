@@ -59,25 +59,6 @@ html {
   background-size: 100%;
 }
 
-@media (prefers-color-scheme: dark) {
-  body {
-    --background-color: var(--google-gray-900);
-    --error-code-color: var(--google-gray-500);
-    --heading-color: var(--google-gray-500);
-    --link-color: var(--google-blue-300);
-    --primary-button-fill-color-active: #81a2d0;
-    --primary-button-fill-color: var(--google-blue-300);
-    --primary-button-text-color: var(--google-gray-900);
-    --quiet-background-color: var(--background-color);
-    --secondary-button-border-color: var(--google-gray-700);
-    --secondary-button-fill-color: var(--google-gray-900);
-    --secondary-button-hover-fill-color: #303339;
-    --secondary-button-text-color: var(--google-blue-300);
-    --small-link-color: var(--google-blue-300);
-    --text-color: var(--google-gray-500);
-  }
-}
-
 [dir=rtl] button {
   float: left;
 }
@@ -1499,50 +1480,4 @@ html[dir=rtl].offline .icon-offline {
   transform-origin: top center;
   transition: transform 250ms cubic-bezier(.4, 0, 1, 1) .4s;
   z-index: 2;
-}
-
-@media (prefers-color-scheme: dark) {
-  .icon {
-    filter: invert(1);
-  }
-
-  .offline .runner-canvas {
-    filter: invert(1);
-  }
-
-  .offline.inverted {
-    background-color: var(--background-color);
-    filter: invert(0);
-  }
-
-  .offline.inverted body {
-    background-color: #fff;
-  }
-
-  .offline.inverted .offline-runner-live-region {
-    color: #fff;
-  }
-
-  #suggestions-list a {
-    color: var(--link-color);
-  }
-
-  #error-information-button {
-    filter: invert(.6);
-  }
-
-  .slow-speed-option {
-    background: var(--google-gray-800);
-    color: var(--google-gray-100);
-  }
-
-  .slow-speed-option .slow-speed-toggle::before,
-  .slow-speed-option [type=checkbox]:checked:disabled+.slow-speed-toggle::before {
-    background: #bdc1c6;
-  }
-
-  .slow-speed-option [type=checkbox]:checked+.slow-speed-toggle::after,
-  .slow-speed-option [type=checkbox]:checked+.slow-speed-toggle::before {
-    background: var(--google-blue-300);
-  }
 }
