@@ -1,122 +1,123 @@
 body {
-  background: #f7f7f7;
-  color: #4f4f4f;
-  word-wrap: break-word;
+  background: #f7f7f7;
+  color: #4f4f4f;
+  word-wrap: break-word;
 }
 
 .hidden {
-  display: none;
+  display: none;
 }
 
 html {
-  -webkit-text-size-adjust: 100%;
-  font-size: 125%;
+  -webkit-text-size-adjust: 100%;
+  font-size: 125%;
 }
 
 .interstitial-wrapper {
-  box-sizing: border-box;
-  font-size: 1em;
-  line-height: 1.6em;
-  margin: 14vh auto 0;
-  max-width: 600px;
-  width: 100%;
+  box-sizing: border-box;
+  font-size: 1em;
+  line-height: 1.6em;
+  margin: 14vh auto 0;
+  max-width: 600px;
+  width: 100%;
 }
 
 html[dir=rtl] .runner-container {
-  transform: scaleX(-1);
+  transform: scaleX(-1);
 }
 
 .offline {
-  transition: filter 1.5s cubic-bezier(.65, .05, .36, 1);
+  transition: filter 1.5s cubic-bezier(.65, .05, .36, 1), background-color 1.5s cubic-bezier(.65, .05, .36, 1);
+  will-change: filter, background-color;
 }
 
 .offline.inverted {
-  background-color: #000;
-  filter: invert(1);
+  background-color: #000;
+  filter: invert(1);
 }
 
 .offline .interstitial-wrapper {
-  color: #4f4f4f;
-  font-size: 1em;
-  line-height: 1.55;
-  margin: 0 auto;
-  max-width: 600px;
-  padding-top: 100px;
-  position: relative;
-  width: 100%;
+  color: #4f4f4f;
+  font-size: 1em;
+  line-height: 1.55;
+  margin: 0 auto;
+  max-width: 600px;
+  padding-top: 100px;
+  position: relative;
+  width: 100%;
 }
 
 .offline .runner-container {
-  direction: ltr;
-  height: 150px;
-  max-width: 600px;
-  overflow: hidden;
-  position: absolute;
-  top: 35px;
-  width: 100%;
+  direction: ltr;
+  height: 150px;
+  max-width: 600px;
+  overflow: hidden;
+  position: absolute;
+  top: 35px;
+  width: 100%;
 }
 
 .offline .runner-container:focus {
-  outline: 0;
+  outline: 0;
 }
 
 .offline .runner-canvas {
-  height: 150px;
-  max-width: 600px;
-  opacity: 1;
-  overflow: hidden;
-  position: absolute;
-  top: 0;
-  z-index: 10;
+  height: 150px;
+  max-width: 600px;
+  opacity: 1;
+  overflow: hidden;
+  position: absolute;
+  top: 0;
+  z-index: 10;
 }
 
 #offline-resources {
-  display: none;
+  display: none;
 }
 
 .arcade-mode,
 .arcade-mode .runner-canvas,
 .arcade-mode .runner-container {
-  image-rendering: pixelated;
-  max-width: 100%;
-  overflow: hidden;
+  image-rendering: pixelated;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .arcade-mode .interstitial-wrapper {
-  height: 100vh;
-  max-width: 100%;
-  overflow: hidden;
+  height: 100vh;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .arcade-mode .runner-container {
-  left: 0;
-  margin: auto;
-  right: 0;
-  transform-origin: top center;
-  transition: transform 250ms cubic-bezier(.4, 0, 1, 1) .4s;
-  z-index: 2;
+  left: 0;
+  margin: auto;
+  right: 0;
+  transform-origin: top center;
+  transition: transform 250ms cubic-bezier(.4, 0, 1, 1) .4s;
+  z-index: 2;
 }
 
 @media (max-width: 600px) {
-  .offline .interstitial-wrapper {
-    width: 90%;
-  }
+  .offline .interstitial-wrapper {
+    width: 90%;
+  }
 }
 
 @media (max-height: 350px) {
-  .offline .interstitial-wrapper {
-    margin-top: 5%;
-  }
+  .offline .interstitial-wrapper {
+    margin-top: 5%;
+  }
 }
 
 @media (min-height: 240px) and (orientation: landscape) {
-  .offline .interstitial-wrapper {
-    margin-bottom: 90px;
-  }
+  .offline .interstitial-wrapper {
+    margin-bottom: 90px;
+  }
 }
 
 @media (max-height: 320px) and (orientation: landscape) {
-  .offline .runner-container {
-    top: 10px;
-  }
+  .offline .runner-container {
+    top: 10px;
+  }
 }
