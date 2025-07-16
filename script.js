@@ -196,7 +196,7 @@ function Horizon(t, e, i, s) {
     this.obstacles = [];
     this.obstacleHistory = [];
     this.cloudFrequency = this.config.CLOUD_FREQUENCY;
-    this.spritePos = e; // this.spritePos will hold the sprite definition object (LDPI or HDPI)
+    this.spritePos = e; 
     this.clouds = [];
     this.cloudSpeed = this.config.BG_CLOUD_SPEED;
     this.horizonLine = null;
@@ -373,15 +373,18 @@ Runner.prototype = {
             const soundSources = Object.values(Runner.sounds);
             const soundNames = Object.keys(Runner.sounds);
             for (let i = 0; i < soundSources.length; i++) {
-                const path = document.getElementById(`offline-sound-${soundNames[i].toLowerCase().replace(/_/g, '-')}`).src;
-                try {
-                    const response = await fetch(path);
-                    const arrayBuffer = await response.arrayBuffer();
-                    this.audioContext.decodeAudioData(arrayBuffer, (buffer) => {
-                        this.soundFx[soundSources[i]] = buffer;
-                    });
-                } catch (error) {
-                    console.error(`Failed to load sound: ${path}`, error);
+                const audioEl = document.getElementById(`offline-sound-${soundNames[i].toLowerCase().replace(/_/g, '-')}`);
+                if (audioEl) {
+                    const path = audioEl.src;
+                    try {
+                        const response = await fetch(path);
+                        const arrayBuffer = await response.arrayBuffer();
+                        this.audioContext.decodeAudioData(arrayBuffer, (buffer) => {
+                            this.soundFx[soundSources[i]] = buffer;
+                        });
+                    } catch (error) {
+                        console.error(`Failed to load sound: ${path}`, error);
+                    }
                 }
             }
         }
@@ -744,14 +747,11 @@ GameOverPanel.prototype = {
         const t = GameOverPanel.dimensions;
         let e = t.TEXT_WIDTH, i = t.TEXT_HEIGHT, s = t.RESTART_WIDTH, n = t.RESTART_HEIGHT;
 
-        // Position for "Game Over" text
         const gameOverX = this.canvasDimensions.WIDTH / 2 - t.TEXT_WIDTH / 2;
         const gameOverY = this.canvasDimensions.HEIGHT / 3;
 
-        // Position for Restart button
         const restartX = this.canvasDimensions.WIDTH / 2 - t.RESTART_WIDTH / 2;
         const restartY = gameOverY + t.TEXT_HEIGHT + 20;
-
 
         if (IS_HIDPI) { e *= 2; i *= 2; s *= 2; n *= 2; }
 
@@ -821,7 +821,7 @@ Trex.prototype = {
         this.yPos = this.groundYPos;
         this.minJumpHeight = this.groundYPos - this.config.MIN_JUMP_HEIGHT;
         this.draw(0, 0);
-        this.update(0, Trex.status.WAITING);
+        this.update(0, Trex.status.RUNNING);
     },
     update(t, e) {
         this.timer += t;
@@ -1126,14 +1126,20 @@ Horizon.prototype = {
         if (this.duplicateObstacleCheck(i.type) || t < i.minSpeed) {
             this.addNewObstacle(t);
         } else {
-            // FIX: Changed this.spriteDef to this.spritePos
             this.obstacles.push(new Obstacle(this.canvasCtx, i, this.spritePos[i.type], this.dimensions, this.gapCoefficient, t));
             this.obstacleHistory.unshift(i.type);
-            if (this.obstacleHistory.length > 1) this.obstacleHistory.splice(Runner.config.MAX_OBSTACLE_DUPLICATION);
+            if (this.obstacleHistory.length > Runner.config.MAX_OBSTACLE_DUPLICATION) {
+                 this.obstacleHistory.splice(Runner.config.MAX_OBSTACLE_DUPLICATION);
+            }
         }
     },
+    // FIX: Replaced with the correct logic to check for CONSECUTIVE duplicates.
     duplicateObstacleCheck(t) {
-        return this.obstacleHistory.indexOf(t) > -1;
+        let e = 0;
+        for (let i = 0; i < this.obstacleHistory.length; i++) {
+            e = this.obstacleHistory[i] === t ? e + 1 : 0;
+        }
+        return e >= Runner.config.MAX_OBSTACLE_DUPLICATION;
     },
     reset() {
         this.obstacles = [];
@@ -1142,12 +1148,11 @@ Horizon.prototype = {
         this.addCloud();
     },
     addCloud() {
-        // FIX: Changed this.spriteDef to this.spritePos
         this.clouds.push(new Cloud(this.canvas, this.spritePos.CLOUD, this.dimensions.WIDTH));
     }
 };
 
-// --- Sprite Definitions ---
+// FIX: Restored the complete and correct sprite definitions from the original project.
 Runner.spriteDefinition = {
     LDPI: {
         CACTUS_LARGE: { x: 332, y: 2 },
@@ -1155,8 +1160,8 @@ Runner.spriteDefinition = {
         CLOUD: { x: 86, y: 2 },
         HORIZON: { x: 2, y: 54 },
         PTERODACTYL: { x: 134, y: 2 },
-        RESTART: { x: 2, y: 2 },
-        TEXT_SPRITE: { x: 484, y: 2 },
+        RESTART: { x: 2, y: 68 },
+        TEXT_SPRITE: { x: 655, y: 2 },
         TREX: { x: 848, y: 2 },
     },
     HDPI: {
@@ -1165,8 +1170,8 @@ Runner.spriteDefinition = {
         CLOUD: { x: 166, y: 2 },
         HORIZON: { x: 2, y: 104 },
         PTERODACTYL: { x: 260, y: 2 },
-        RESTART: { x: 2, y: 2 },
-        TEXT_SPRITE: { x: 954, y: 2 },
+        RESTART: { x: 2, y: 130 },
+        TEXT_SPRITE: { x: 1294, y: 2 },
         TREX: { x: 1678, y: 2 },
     }
 };
